@@ -29,20 +29,25 @@ import java.io.File;
 
 public class Volley {
 
-    /** Default on-disk cache directory. */
+    /**
+     * Default on-disk cache directory.
+     */
     private static final String DEFAULT_CACHE_DIR = "volley";
 
     /**
      * Creates a default instance of the worker pool and calls {@link RequestQueue#start()} on it.
      *
      * @param context A {@link Context} to use for creating the cache dir.
-     * @param stack A {@link BaseHttpStack} to use for the network, or null for default.
+     * @param stack   A {@link BaseHttpStack} to use for the network, or null for default.
      * @return A started {@link RequestQueue} instance.
      */
     public static RequestQueue newRequestQueue(Context context, BaseHttpStack stack) {
         BasicNetwork network;
         if (stack == null) {
+            // 默认模式
             if (Build.VERSION.SDK_INT >= 9) {
+                //HurlStack TODO 感觉是单个http请求
+                //BasicNetwork TODO 你是啥
                 network = new BasicNetwork(new HurlStack());
             } else {
                 // Prior to Gingerbread, HttpUrlConnection was unreliable.
@@ -71,10 +76,10 @@ public class Volley {
      * Creates a default instance of the worker pool and calls {@link RequestQueue#start()} on it.
      *
      * @param context A {@link Context} to use for creating the cache dir.
-     * @param stack An {@link HttpStack} to use for the network, or null for default.
+     * @param stack   An {@link HttpStack} to use for the network, or null for default.
      * @return A started {@link RequestQueue} instance.
      * @deprecated Use {@link #newRequestQueue(Context, BaseHttpStack)} instead to avoid depending
-     *             on Apache HTTP. This method may be removed in a future release of Volley.
+     * on Apache HTTP. This method may be removed in a future release of Volley.
      */
     @Deprecated
     @SuppressWarnings("deprecation")
@@ -86,8 +91,12 @@ public class Volley {
     }
 
     private static RequestQueue newRequestQueue(Context context, Network network) {
+        // 创建一个缓存文件
         File cacheDir = new File(context.getCacheDir(), DEFAULT_CACHE_DIR);
+        // TODO DiskBasedCache是缓存
+        // 新建一个任务队列
         RequestQueue queue = new RequestQueue(new DiskBasedCache(cacheDir), network);
+        // 卍解
         queue.start();
         return queue;
     }

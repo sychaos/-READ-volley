@@ -28,20 +28,26 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A request dispatch queue with a thread pool of dispatchers.
- *
+ * <p>
  * Calling {@link #add(Request)} will enqueue the given Request for dispatch,
  * resolving from either cache or network on a worker thread, and then delivering
  * a parsed response on the main thread.
  */
 public class RequestQueue {
 
-    /** Callback interface for completed requests. */
+    /**
+     * Callback interface for completed requests.
+     */
     public interface RequestFinishedListener<T> {
-        /** Called when a request has finished processing. */
+        /**
+         * Called when a request has finished processing.
+         */
         void onRequestFinished(Request<T> request);
     }
 
-    /** Used for generating monotonically-increasing sequence numbers for requests. */
+    /**
+     * Used for generating monotonically-increasing sequence numbers for requests.
+     */
     private final AtomicInteger mSequenceGenerator = new AtomicInteger();
 
     /**
@@ -51,30 +57,46 @@ public class RequestQueue {
      */
     private final Set<Request<?>> mCurrentRequests = new HashSet<Request<?>>();
 
-    /** The cache triage queue. */
+    /**
+     * The cache triage queue.
+     */
     private final PriorityBlockingQueue<Request<?>> mCacheQueue =
             new PriorityBlockingQueue<>();
 
-    /** The queue of requests that are actually going out to the network. */
+    /**
+     * The queue of requests that are actually going out to the network.
+     */
     private final PriorityBlockingQueue<Request<?>> mNetworkQueue =
             new PriorityBlockingQueue<>();
 
-    /** Number of network request dispatcher threads to start. */
+    /**
+     * Number of network request dispatcher threads to start.
+     */
     private static final int DEFAULT_NETWORK_THREAD_POOL_SIZE = 4;
 
-    /** Cache interface for retrieving and storing responses. */
+    /**
+     * Cache interface for retrieving and storing responses.
+     */
     private final Cache mCache;
 
-    /** Network interface for performing requests. */
+    /**
+     * Network interface for performing requests.
+     */
     private final Network mNetwork;
 
-    /** Response delivery mechanism. */
+    /**
+     * Response delivery mechanism.
+     */
     private final ResponseDelivery mDelivery;
 
-    /** The network dispatchers. */
+    /**
+     * The network dispatchers.
+     */
     private final NetworkDispatcher[] mDispatchers;
 
-    /** The cache dispatcher. */
+    /**
+     * The cache dispatcher.
+     */
     private CacheDispatcher mCacheDispatcher;
 
     private final List<RequestFinishedListener> mFinishedListeners =
@@ -83,13 +105,13 @@ public class RequestQueue {
     /**
      * Creates the worker pool. Processing will not begin until {@link #start()} is called.
      *
-     * @param cache A Cache to use for persisting responses to disk
-     * @param network A Network interface for performing HTTP requests
+     * @param cache          A Cache to use for persisting responses to disk
+     * @param network        A Network interface for performing HTTP requests
      * @param threadPoolSize Number of network dispatcher threads to create
-     * @param delivery A ResponseDelivery interface for posting responses and errors
+     * @param delivery       A ResponseDelivery interface for posting responses and errors
      */
     public RequestQueue(Cache cache, Network network, int threadPoolSize,
-            ResponseDelivery delivery) {
+                        ResponseDelivery delivery) {
         mCache = cache;
         mNetwork = network;
         mDispatchers = new NetworkDispatcher[threadPoolSize];
@@ -99,8 +121,8 @@ public class RequestQueue {
     /**
      * Creates the worker pool. Processing will not begin until {@link #start()} is called.
      *
-     * @param cache A Cache to use for persisting responses to disk
-     * @param network A Network interface for performing HTTP requests
+     * @param cache          A Cache to use for persisting responses to disk
+     * @param network        A Network interface for performing HTTP requests
      * @param threadPoolSize Number of network dispatcher threads to create
      */
     public RequestQueue(Cache cache, Network network, int threadPoolSize) {
@@ -111,7 +133,7 @@ public class RequestQueue {
     /**
      * Creates the worker pool. Processing will not begin until {@link #start()} is called.
      *
-     * @param cache A Cache to use for persisting responses to disk
+     * @param cache   A Cache to use for persisting responses to disk
      * @param network A Network interface for performing HTTP requests
      */
     public RequestQueue(Cache cache, Network network) {
@@ -123,11 +145,12 @@ public class RequestQueue {
      */
     public void start() {
         stop();  // Make sure any currently running dispatchers are stopped.
-        // Create the cache dispatcher and start it.
+        //  开启一条新的缓存线程 TODO 缓存线程干了什么
         mCacheDispatcher = new CacheDispatcher(mCacheQueue, mNetworkQueue, mCache, mDelivery);
         mCacheDispatcher.start();
 
         // Create network dispatchers (and corresponding threads) up to the pool size.
+        //  开启四（默认）条新的网络线程 TODO 网络线程干了什么
         for (int i = 0; i < mDispatchers.length; i++) {
             NetworkDispatcher networkDispatcher = new NetworkDispatcher(mNetworkQueue, mNetwork,
                     mCache, mDelivery);
@@ -174,6 +197,7 @@ public class RequestQueue {
 
     /**
      * Cancels all requests in this queue for which the given filter applies.
+     *
      * @param filter The filtering function to use
      */
     public void cancelAll(RequestFilter filter) {
@@ -204,6 +228,7 @@ public class RequestQueue {
 
     /**
      * Adds a Request to the dispatch queue.
+     *
      * @param request The request to service
      * @return The passed-in request
      */
@@ -225,7 +250,7 @@ public class RequestQueue {
         }
         mCacheQueue.add(request);
         return request;
-     }
+    }
 
     /**
      * Called from {@link Request#finish(String)}, indicating that processing of the given request
@@ -237,25 +262,25 @@ public class RequestQueue {
             mCurrentRequests.remove(request);
         }
         synchronized (mFinishedListeners) {
-          for (RequestFinishedListener<T> listener : mFinishedListeners) {
-            listener.onRequestFinished(request);
-          }
+            for (RequestFinishedListener<T> listener : mFinishedListeners) {
+                listener.onRequestFinished(request);
+            }
         }
 
     }
 
-    public  <T> void addRequestFinishedListener(RequestFinishedListener<T> listener) {
-      synchronized (mFinishedListeners) {
-        mFinishedListeners.add(listener);
-      }
+    public <T> void addRequestFinishedListener(RequestFinishedListener<T> listener) {
+        synchronized (mFinishedListeners) {
+            mFinishedListeners.add(listener);
+        }
     }
 
     /**
      * Remove a RequestFinishedListener. Has no effect if listener was not previously added.
      */
-    public  <T> void removeRequestFinishedListener(RequestFinishedListener<T> listener) {
-      synchronized (mFinishedListeners) {
-        mFinishedListeners.remove(listener);
-      }
+    public <T> void removeRequestFinishedListener(RequestFinishedListener<T> listener) {
+        synchronized (mFinishedListeners) {
+            mFinishedListeners.remove(listener);
+        }
     }
 }

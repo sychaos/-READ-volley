@@ -1,12 +1,12 @@
 /**
  * Copyright (C) 2013 The Android Open Source Project
- *
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -30,7 +30,9 @@ import com.android.volley.toolbox.ImageLoader.ImageListener;
  * associated request.
  */
 public class NetworkImageView extends ImageView {
-    /** The URL of the network image to load */
+    /**
+     * The URL of the network image to load
+     */
     private String mUrl;
 
     /**
@@ -43,10 +45,14 @@ public class NetworkImageView extends ImageView {
      */
     private int mErrorImageId;
 
-    /** Local copy of the ImageLoader. */
+    /**
+     * Local copy of the ImageLoader.
+     */
     private ImageLoader mImageLoader;
 
-    /** Current ImageContainer. (either in-flight or finished) */
+    /**
+     * Current ImageContainer. (either in-flight or finished)
+     */
     private ImageContainer mImageContainer;
 
     public NetworkImageView(Context context) {
@@ -65,12 +71,12 @@ public class NetworkImageView extends ImageView {
      * Sets URL of the image that should be loaded into this view. Note that calling this will
      * immediately either set the cached image (if available) or the default image specified by
      * {@link NetworkImageView#setDefaultImageResId(int)} on the view.
-     *
+     * <p>
      * NOTE: If applicable, {@link NetworkImageView#setDefaultImageResId(int)} and
      * {@link NetworkImageView#setErrorImageResId(int)} should be called prior to calling
      * this function.
      *
-     * @param url The URL that should be loaded into this ImageView.
+     * @param url         The URL that should be loaded into this ImageView.
      * @param imageLoader ImageLoader that will be used to make the request.
      */
     public void setImageUrl(String url, ImageLoader imageLoader) {
@@ -98,9 +104,11 @@ public class NetworkImageView extends ImageView {
 
     /**
      * Loads the image for the view if it isn't already loaded.
+     *
      * @param isInLayoutPass True if this was invoked from a layout pass, false otherwise.
      */
     void loadImageIfNecessary(final boolean isInLayoutPass) {
+        // 适配长宽
         int width = getWidth();
         int height = getHeight();
         ScaleType scaleType = getScaleType();
@@ -122,9 +130,11 @@ public class NetworkImageView extends ImageView {
         // currently loaded image.
         if (TextUtils.isEmpty(mUrl)) {
             if (mImageContainer != null) {
+                // mUrl为空时取消请求
                 mImageContainer.cancelRequest();
                 mImageContainer = null;
             }
+            // 不解释了
             setDefaultImageOrNull();
             return;
         }
@@ -136,11 +146,13 @@ public class NetworkImageView extends ImageView {
                 return;
             } else {
                 // if there is a pre-existing request, cancel it if it's fetching a different URL.
+                // 如果当前正在加载一个Url 且与新的mUrl不同，则取消上次请求
                 mImageContainer.cancelRequest();
                 setDefaultImageOrNull();
             }
         }
 
+        // 开始加载新请求
         // Calculate the max image width / height to use while ignoring WRAP_CONTENT dimens.
         int maxWidth = wrapWidth ? 0 : width;
         int maxHeight = wrapHeight ? 0 : height;
@@ -149,6 +161,7 @@ public class NetworkImageView extends ImageView {
         // from the network.
 
         // update the ImageContainer to be the new bitmap container.
+        // TODO mImageContainer, ImageListener
         mImageContainer = mImageLoader.get(mUrl,
                 new ImageListener() {
                     @Override
@@ -184,10 +197,9 @@ public class NetworkImageView extends ImageView {
     }
 
     private void setDefaultImageOrNull() {
-        if(mDefaultImageId != 0) {
+        if (mDefaultImageId != 0) {
             setImageResource(mDefaultImageId);
-        }
-        else {
+        } else {
             setImageBitmap(null);
         }
     }

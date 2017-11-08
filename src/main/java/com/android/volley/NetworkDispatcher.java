@@ -26,7 +26,7 @@ import java.util.concurrent.BlockingQueue;
 
 /**
  * Provides a thread for performing network dispatch from a queue of requests.
- *
+ * <p>
  * Requests added to the specified queue are processed from the network via a
  * specified {@link Network} interface. Responses are committed to cache, if
  * eligible, using a specified {@link Cache} interface. Valid responses and
@@ -34,28 +34,38 @@ import java.util.concurrent.BlockingQueue;
  */
 public class NetworkDispatcher extends Thread {
 
-    /** The queue of requests to service. */
+    /**
+     * The queue of requests to service.
+     */
     private final BlockingQueue<Request<?>> mQueue;
-    /** The network interface for processing requests. */
+    /**
+     * The network interface for processing requests.
+     */
     private final Network mNetwork;
-    /** The cache to write to. */
+    /**
+     * The cache to write to.
+     */
     private final Cache mCache;
-    /** For posting responses and errors. */
+    /**
+     * For posting responses and errors.
+     */
     private final ResponseDelivery mDelivery;
-    /** Used for telling us to die. */
+    /**
+     * Used for telling us to die.
+     */
     private volatile boolean mQuit = false;
 
     /**
      * Creates a new network dispatcher thread.  You must call {@link #start()}
      * in order to begin processing.
      *
-     * @param queue Queue of incoming requests for triage
-     * @param network Network interface to use for performing requests
-     * @param cache Cache interface to use for writing responses to cache
+     * @param queue    Queue of incoming requests for triage
+     * @param network  Network interface to use for performing requests
+     * @param cache    Cache interface to use for writing responses to cache
      * @param delivery Delivery interface to use for posting responses
      */
     public NetworkDispatcher(BlockingQueue<Request<?>> queue,
-            Network network, Cache cache, ResponseDelivery delivery) {
+                             Network network, Cache cache, ResponseDelivery delivery) {
         mQueue = queue;
         mNetwork = network;
         mCache = cache;
@@ -81,7 +91,9 @@ public class NetworkDispatcher extends Thread {
 
     @Override
     public void run() {
+        // 网络线程
         Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
+        // 处于等待状态
         while (true) {
             long startTimeMs = SystemClock.elapsedRealtime();
             Request<?> request;
@@ -97,10 +109,12 @@ public class NetworkDispatcher extends Thread {
             }
 
             try {
+                // 添加标记
                 request.addMarker("network-queue-take");
 
                 // If the request was cancelled already, do not perform the
                 // network request.
+                // 如果请求取消直接跳过
                 if (request.isCanceled()) {
                     request.finish("network-discard-cancelled");
                     request.notifyListenerResponseNotUsable();
@@ -128,11 +142,12 @@ public class NetworkDispatcher extends Thread {
                 // Write to cache if applicable.
                 // TODO: Only update cache metadata instead of entire record for 304s.
                 if (request.shouldCache() && response.cacheEntry != null) {
+                    // 放入缓存
                     mCache.put(request.getCacheKey(), response.cacheEntry);
                     request.addMarker("network-cache-written");
                 }
 
-                // Post the response back.
+                // Post the response back.postResponse发送广播
                 request.markDelivered();
                 mDelivery.postResponse(request, response);
                 request.notifyListenerResponseReceived(response);

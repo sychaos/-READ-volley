@@ -26,7 +26,7 @@ import java.util.concurrent.BlockingQueue;
 
 /**
  * Provides a thread for performing cache triage on a queue of requests.
- *
+ * <p>
  * Requests added to the specified cache queue are resolved from cache.
  * Any deliverable response is posted back to the caller via a
  * {@link ResponseDelivery}.  Cache misses and responses that require
@@ -37,32 +37,44 @@ public class CacheDispatcher extends Thread {
 
     private static final boolean DEBUG = VolleyLog.DEBUG;
 
-    /** The queue of requests coming in for triage. */
+    /**
+     * The queue of requests coming in for triage.
+     */
     private final BlockingQueue<Request<?>> mCacheQueue;
 
-    /** The queue of requests going out to the network. */
+    /**
+     * The queue of requests going out to the network.
+     */
     private final BlockingQueue<Request<?>> mNetworkQueue;
 
-    /** The cache to read from. */
+    /**
+     * The cache to read from.
+     */
     private final Cache mCache;
 
-    /** For posting responses. */
+    /**
+     * For posting responses.
+     */
     private final ResponseDelivery mDelivery;
 
-    /** Used for telling us to die. */
+    /**
+     * Used for telling us to die.
+     */
     private volatile boolean mQuit = false;
 
-    /** Manage list of waiting requests and de-duplicate requests with same cache key. */
+    /**
+     * Manage list of waiting requests and de-duplicate requests with same cache key.
+     */
     private final WaitingRequestManager mWaitingRequestManager;
 
     /**
      * Creates a new cache triage dispatcher thread.  You must call {@link #start()}
      * in order to begin processing.
      *
-     * @param cacheQueue Queue of incoming requests for triage
+     * @param cacheQueue   Queue of incoming requests for triage
      * @param networkQueue Queue to post requests that require network to
-     * @param cache Cache interface to use for resolution
-     * @param delivery Delivery interface to use for posting responses
+     * @param cache        Cache interface to use for resolution
+     * @param delivery     Delivery interface to use for posting responses
      */
     public CacheDispatcher(
             BlockingQueue<Request<?>> cacheQueue, BlockingQueue<Request<?>> networkQueue,
@@ -90,7 +102,7 @@ public class CacheDispatcher extends Thread {
 
         // Make a blocking call to initialize the cache.
         mCache.initialize();
-
+        //等待状态
         while (true) {
             try {
                 // Get a request from the cache triage queue, blocking until
@@ -105,17 +117,22 @@ public class CacheDispatcher extends Thread {
                 }
 
                 // Attempt to retrieve this item from cache.
+                // 从缓存中获取实体 TODO 什么时候存的
                 Cache.Entry entry = mCache.get(request.getCacheKey());
+                // entry为空
                 if (entry == null) {
                     request.addMarker("cache-miss");
                     // Cache miss; send off to the network dispatcher.
+                    // 不在等待队列
                     if (!mWaitingRequestManager.maybeAddToWaitingRequests(request)) {
+                        // 加入网络队列
                         mNetworkQueue.put(request);
                     }
                     continue;
                 }
 
                 // If it is completely expired, just send it to the network.
+                // 如果entry过期 也是加入网络队列
                 if (entry.isExpired()) {
                     request.addMarker("cache-hit-expired");
                     request.setCacheEntry(entry);
@@ -125,12 +142,14 @@ public class CacheDispatcher extends Thread {
                     continue;
                 }
 
+                // TODO 看不懂 据说是跟NetworkDispatcher某部分一致
                 // We have a cache hit; parse its data for delivery back to the request.
                 request.addMarker("cache-hit");
                 Response<?> response = request.parseNetworkResponse(
                         new NetworkResponse(entry.data, entry.responseHeaders));
                 request.addMarker("cache-hit-parsed");
 
+                // 如果entry不需要刷新 直接发送response
                 if (!entry.refreshNeeded()) {
                     // Completely unexpired cache hit. Just deliver the response.
                     mDelivery.postResponse(request, response);
@@ -146,6 +165,7 @@ public class CacheDispatcher extends Thread {
                     if (!mWaitingRequestManager.maybeAddToWaitingRequests(request)) {
                         // Post the intermediate response back to the user and have
                         // the delivery then forward the request along to the network.
+                        // 估计是 刷新entry 然后 加入网络队列 postResponse发送广播
                         mDelivery.postResponse(request, response, new Runnable() {
                             @Override
                             public void run() {
@@ -160,6 +180,7 @@ public class CacheDispatcher extends Thread {
                     } else {
                         // request has been added to list of waiting requests
                         // to receive the network response from the first request once it returns.
+                        // 如果entry不需要刷新 直接发送response
                         mDelivery.postResponse(request, response);
                     }
                 }
@@ -177,12 +198,12 @@ public class CacheDispatcher extends Thread {
 
         /**
          * Staging area for requests that already have a duplicate request in flight.
-         *
+         * <p>
          * <ul>
-         *     <li>containsKey(cacheKey) indicates that there is a request in flight for the given cache
-         *          key.</li>
-         *     <li>get(cacheKey) returns waiting requests for the given cache key. The in flight request
-         *          is <em>not</em> contained in that list. Is null if no requests are staged.</li>
+         * <li>containsKey(cacheKey) indicates that there is a request in flight for the given cache
+         * key.</li>
+         * <li>get(cacheKey) returns waiting requests for the given cache key. The in flight request
+         * is <em>not</em> contained in that list. Is null if no requests are staged.</li>
          * </ul>
          */
         private final Map<String, List<Request<?>>> mWaitingRequests = new HashMap<>();
@@ -193,7 +214,9 @@ public class CacheDispatcher extends Thread {
             mCacheDispatcher = cacheDispatcher;
         }
 
-        /** Request received a valid response that can be used by other waiting requests. */
+        /**
+         * Request received a valid response that can be used by other waiting requests.
+         */
         @Override
         public void onResponseReceived(Request<?> request, Response<?> response) {
             if (response.cacheEntry == null || response.cacheEntry.isExpired()) {
@@ -217,7 +240,9 @@ public class CacheDispatcher extends Thread {
             }
         }
 
-        /** No valid response received from network, release waiting requests. */
+        /**
+         * No valid response received from network, release waiting requests.
+         */
         @Override
         public synchronized void onNoUsableResponseReceived(Request<?> request) {
             String cacheKey = request.getCacheKey();
@@ -245,6 +270,7 @@ public class CacheDispatcher extends Thread {
         /**
          * For cacheable requests, if a request for the same cache key is already in flight,
          * add it to a queue to wait for that in-flight request to finish.
+         *
          * @return whether the request was queued. If false, we should continue issuing the request
          * over the network. If true, we should put the request on hold to be processed when
          * the in-flight request finishes.
