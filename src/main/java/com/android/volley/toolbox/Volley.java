@@ -41,13 +41,13 @@ public class Volley {
      * @param stack   A {@link BaseHttpStack} to use for the network, or null for default.
      * @return A started {@link RequestQueue} instance.
      */
+    // 库方法入口 RequestQueue mQueue = Volley.newRequestQueue(context);
+    // TODO add方法
     public static RequestQueue newRequestQueue(Context context, BaseHttpStack stack) {
         BasicNetwork network;
         if (stack == null) {
-            // 默认模式
+            // 默认模式 构建httpClient或者HttpURLConnection
             if (Build.VERSION.SDK_INT >= 9) {
-                //HurlStack TODO 感觉是单个http请求
-                //BasicNetwork TODO 你是啥
                 network = new BasicNetwork(new HurlStack());
             } else {
                 // Prior to Gingerbread, HttpUrlConnection was unreliable.
@@ -68,7 +68,7 @@ public class Volley {
         } else {
             network = new BasicNetwork(stack);
         }
-
+        // 返回队列实例
         return newRequestQueue(context, network);
     }
 
@@ -93,10 +93,9 @@ public class Volley {
     private static RequestQueue newRequestQueue(Context context, Network network) {
         // 创建一个缓存文件
         File cacheDir = new File(context.getCacheDir(), DEFAULT_CACHE_DIR);
-        // TODO DiskBasedCache是缓存
+        // DiskBasedCache是保有cacheDir以及其容量的实例
         // 新建一个任务队列
         RequestQueue queue = new RequestQueue(new DiskBasedCache(cacheDir), network);
-        // 卍解
         queue.start();
         return queue;
     }

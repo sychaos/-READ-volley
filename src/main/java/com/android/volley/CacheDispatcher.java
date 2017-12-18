@@ -101,12 +101,17 @@ public class CacheDispatcher extends Thread {
         Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
 
         // Make a blocking call to initialize the cache.
+        // 调用DiskBasedCache的initialize生成缓存文件
         mCache.initialize();
         //等待状态
         while (true) {
             try {
                 // Get a request from the cache triage queue, blocking until
                 // at least one is available.
+                // 我曹！！！
+                // 虽然不知道怎么实现的，但是肯定在这个方法中有线程堵塞的机制（不然玩不了）
+                // BlockingQueue阻塞队列,当队列中没有数据的情况下，消费者端的所有线程都会被自动阻塞（挂起），直到有数据放入队列。
+                // 当队列中填满数据的情况下，生产者端的所有线程都会被自动阻塞（挂起），直到队列中有空的位置，线程被自动唤醒
                 final Request<?> request = mCacheQueue.take();
                 request.addMarker("cache-queue-take");
 
@@ -117,7 +122,7 @@ public class CacheDispatcher extends Thread {
                 }
 
                 // Attempt to retrieve this item from cache.
-                // 从缓存中获取实体 TODO 什么时候存的
+                // 从缓存中获取实体
                 Cache.Entry entry = mCache.get(request.getCacheKey());
                 // entry为空
                 if (entry == null) {
@@ -142,7 +147,7 @@ public class CacheDispatcher extends Thread {
                     continue;
                 }
 
-                // TODO 看不懂 据说是跟NetworkDispatcher某部分一致
+                // 应该是缓存中已存在的有效请求，直接转换为Response
                 // We have a cache hit; parse its data for delivery back to the request.
                 request.addMarker("cache-hit");
                 Response<?> response = request.parseNetworkResponse(
@@ -165,7 +170,8 @@ public class CacheDispatcher extends Thread {
                     if (!mWaitingRequestManager.maybeAddToWaitingRequests(request)) {
                         // Post the intermediate response back to the user and have
                         // the delivery then forward the request along to the network.
-                        // 估计是 刷新entry 然后 加入网络队列 postResponse发送广播
+                        //  加入网络队列 有结果后 postResponse发送广播
+                        // mDelivery是 new ExecutorDelivery(new Handler(Looper.getMainLooper()) 一个持有主线程Looper的线程池
                         mDelivery.postResponse(request, response, new Runnable() {
                             @Override
                             public void run() {

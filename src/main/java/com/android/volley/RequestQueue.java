@@ -145,7 +145,9 @@ public class RequestQueue {
      */
     public void start() {
         stop();  // Make sure any currently running dispatchers are stopped.
-        //  开启一条新的缓存线程 TODO 缓存线程干了什么
+        //  开启一条新的缓存线程
+        // 一个requestQueue 维护一个mCacheQueue，和mNetworkQueue
+        // mCache就是DiskBasedCache，mDispatchers是new ExecutorDelivery(new Handler(Looper.getMainLooper())
         mCacheDispatcher = new CacheDispatcher(mCacheQueue, mNetworkQueue, mCache, mDelivery);
         mCacheDispatcher.start();
 
@@ -163,9 +165,11 @@ public class RequestQueue {
      * Stops the cache and network dispatchers.
      */
     public void stop() {
+        // 关闭缓存的调度
         if (mCacheDispatcher != null) {
             mCacheDispatcher.quit();
         }
+        // 关闭所有的mDispatchers
         for (final NetworkDispatcher mDispatcher : mDispatchers) {
             if (mDispatcher != null) {
                 mDispatcher.quit();
@@ -232,6 +236,7 @@ public class RequestQueue {
      * @param request The request to service
      * @return The passed-in request
      */
+    // TODO
     public <T> Request<T> add(Request<T> request) {
         // Tag the request as belonging to this queue and add it to the set of current requests.
         request.setRequestQueue(this);
@@ -245,9 +250,12 @@ public class RequestQueue {
 
         // If the request is uncacheable, skip the cache queue and go straight to the network.
         if (!request.shouldCache()) {
+            // 对滴。。加入网络队列 然后应该看NetworkDispatcher
             mNetworkQueue.add(request);
             return request;
         }
+        // 对滴。。加入缓存队列 然后应该看CacheDispatcher
+        // CacheDispatcher中一定有关于添加到mNetworkQueue的操作
         mCacheQueue.add(request);
         return request;
     }

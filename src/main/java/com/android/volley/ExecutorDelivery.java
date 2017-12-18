@@ -57,8 +57,11 @@ public class ExecutorDelivery implements ResponseDelivery {
 
     @Override
     public void postResponse(Request<?> request, Response<?> response, Runnable runnable) {
+        // 线程锁？？
         request.markDelivered();
         request.addMarker("post-response");
+        // 执行runnable
+        // ResponseDeliveryRunnable包装了一层
         mResponsePoster.execute(new ResponseDeliveryRunnable(request, response, runnable));
     }
 
@@ -102,6 +105,8 @@ public class ExecutorDelivery implements ResponseDelivery {
             }
 
             // Deliver a normal response or error, depending.
+            // 回调
+            // StringRequest是mRequest的一种
             if (mResponse.isSuccess()) {
                 mRequest.deliverResponse(mResponse.result);
             } else {
