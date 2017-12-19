@@ -78,6 +78,7 @@ public class NetworkDispatcher extends Thread {
      */
     public void quit() {
         mQuit = true;
+        // 就是他！
         interrupt();
     }
 
@@ -101,7 +102,7 @@ public class NetworkDispatcher extends Thread {
                 // Take a request from the queue.
                 request = mQueue.take();
             } catch (InterruptedException e) {
-                // We may have been interrupted because it was time to quit.
+                // We may have been interrupted because it was time to quit. ！！！！
                 if (mQuit) {
                     return;
                 }

@@ -204,6 +204,7 @@ public class DiskBasedCache implements Cache {
     /**
      * Puts the entry with the specified key into the cache.
      */
+    // 这应该是把请求结果写到文件里去
     @Override
     public synchronized void put(String key, Entry entry) {
         pruneIfNeeded(entry.data.length);

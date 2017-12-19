@@ -1,8 +1,5 @@
 ### Volley
 
-
-TODO 缓存实现
-
 Volley is an HTTP library that makes networking for Android apps easier and, most
 importantly, faster.
 

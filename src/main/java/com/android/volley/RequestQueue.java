@@ -152,7 +152,7 @@ public class RequestQueue {
         mCacheDispatcher.start();
 
         // Create network dispatchers (and corresponding threads) up to the pool size.
-        //  开启四（默认）条新的网络线程 TODO 网络线程干了什么
+        //  开启四（默认）条新的网络线程
         for (int i = 0; i < mDispatchers.length; i++) {
             NetworkDispatcher networkDispatcher = new NetworkDispatcher(mNetworkQueue, mNetwork,
                     mCache, mDelivery);
@@ -236,11 +236,12 @@ public class RequestQueue {
      * @param request The request to service
      * @return The passed-in request
      */
-    // TODO
     public <T> Request<T> add(Request<T> request) {
         // Tag the request as belonging to this queue and add it to the set of current requests.
         request.setRequestQueue(this);
         synchronized (mCurrentRequests) {
+            // mCurrentRequests是set故已加入其中的request，在第一个request未执行前不会被重复加入
+            // 如果在第一个request执行完后调用add 会在cache中有相应处理
             mCurrentRequests.add(request);
         }
 
